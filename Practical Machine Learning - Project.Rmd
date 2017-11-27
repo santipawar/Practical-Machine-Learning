@@ -3,7 +3,10 @@ title: "Practical Machine Learning-Project"
 author: "Santosh Pawar"
 date: "November 26, 2017"
 output:
-  html_document: default
+  html_document: 
+    fig_caption: yes
+    keep_md: yes
+    toc: yes
   pdf_document: default
 ---
 
@@ -14,7 +17,8 @@ output:
 ## Executive summary: 
 Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. These type of devices are part of the quantified self movement - a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it.They Participants were asked to perform barbell lifts correctly and incorrectly in 5 different ways.
 This project used data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants to predict the manner in which they did the exercise.
- 
+
+--- 
  
 ##Data Preprocessing
 ```{r Data, include=FALSE}
@@ -33,7 +37,6 @@ download.file(url2, destfile="pml-testing.csv")
 trainFile <- read.csv("pml-training.csv", header=TRUE)
 testFile<- read.csv("pml-testing.csv", header=TRUE)
 ```
-
 
 ```{r Read data, include=TRUE}
 #Read the Data
@@ -54,7 +57,6 @@ The training data set contains 19622 observations (rows) and 160 variables (colu
 #Data is cleaned to remove observations with missing values and some meaningless variables
 
 sum(complete.cases(trainRaw))
-```
 
 ##Remove NA
 ```{r Remove NA, include=TRUE}
@@ -108,9 +110,9 @@ controlRf <- trainControl(method="cv", 5)
 
 modelRf <- train(classe ~ ., data=trainData, method="rf", trControl=controlRf, ntree=250)
 modelRf
-#modelRf = proc.time()
-#(randForest = randomForest(classe~., data=trainData, ntree = 500))
 ```
+
+---
 
 ##Validation
 ```{r Data validation, include=TRUE}
@@ -133,7 +135,6 @@ accuracy
 oose <- 1 - as.numeric(confusionMatrix(testData$classe, predictRf)$overall[1])
 oose
 ```
-
 The accuracy of the model is estimated to be 99.03% and the estimated out-of-sample error is 0.97%.
 
 ---
@@ -145,6 +146,8 @@ The accuracy of the model is estimated to be 99.03% and the estimated out-of-sam
 result <- predict(modelRf, testCleaned[, -length(names(testCleaned))])
 result
 ```
+
+---
 
 ##Appendix
 ##Figures
