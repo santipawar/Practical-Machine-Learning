@@ -1,0 +1,139 @@
+---
+title: "Practical Machine Learning-Project"
+author: "Santosh Pawar"
+date: "November 27, 2017"
+output: html_document
+---
+
+#Title: Quantifying excercise patterns and activities of individuals from accelerometer data
+
+##Executive summary:
+
+Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. These type of devices are part of the quantified self movement - a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it.They Participants were asked to perform barbell lifts correctly and incorrectly in 5 different ways. This project used data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants to predict the manner in which they did the exercise.
+
+##Data Preprocessing
+```{r setup, include=FALSE}
+library(caret)
+library(rpart)
+library(rpart.plot)
+library(randomForest)
+library(corrplot)
+library(e1071)
+
+#Download the Data
+url1 <- "http://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv"
+download.file(url1, destfile="pml-training.csv")
+url2 <- "http://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv"
+download.file(url2, destfile="pml-testing.csv")
+trainFile <- read.csv("pml-training.csv", header=TRUE)
+testFile<- read.csv("pml-testing.csv", header=TRUE)
+```
+```{r Read data, include=TRUE}
+#Read the Data
+trainRaw <- read.csv("pml-training.csv")
+testRaw <- read.csv("pml-testing.csv")
+
+dim(trainRaw)
+
+dim(testRaw)
+```
+The training data set contains 19622 observations (rows) and 160 variables (columns), while the testing data set contains 20 observations and 160 variables. The "classe" variable in the training set is the outcome to predict.
+
+##Clean the data
+```{r Clean the data, include=TRUE}
+#Data is cleaned to remove observations with missing values and some meaningless variables
+
+sum(complete.cases(trainRaw))
+
+#Remove columns that contain NA missing values
+
+trainRaw <- trainRaw[, colSums(is.na(trainRaw)) == 0] 
+testRaw <- testRaw[, colSums(is.na(testRaw)) == 0] 
+
+#Remove columns that do not contribute much to the accelerometer measurements
+
+classe <- trainRaw$classe
+trainRemove <- grepl("^X|timestamp|window", names(trainRaw))
+trainRaw <- trainRaw[, !trainRemove]
+trainCleaned <- trainRaw[, sapply(trainRaw, is.numeric)]
+trainCleaned$classe <- classe
+
+testRemove <- grepl("^X|timestamp|window", names(testRaw))
+testRaw <- testRaw[, !testRemove]
+testCleaned <- testRaw[, sapply(testRaw, is.numeric)]
+
+dim(trainCleaned)
+
+dim(testCleaned)
+```
+The cleaned training data set now contains 19622 observations and 53 variables, while the testing data set contains 20 observations and 53 variables. The "classe" variable is still in the cleaned training set.
+
+##Slice the data 
+```{r Splice data, include=TRUE}
+#Split the cleaned training set into a training data set (70%) and a validation data set (30%). The validation data set is used to perform cross validation.
+
+# Set seed for reproducibility of data
+set.seed(12345) 
+
+#Partition data
+inTrain <- createDataPartition(trainCleaned$classe, p=0.70, list=F)
+trainData <- trainCleaned[inTrain, ]
+testData <- trainCleaned[-inTrain, ]
+```
+
+##Data Modeling
+```{r Data Modeling, include=TRUE}
+#Fit a predictive model for activity recognition using Random Forest algorithm. Five-fold cross validation is performed.
+
+controlRf <- trainControl(method="cv", 5)
+
+modelRf <- train(classe ~ ., data=trainData, method="rf", trControl=controlRf, ntree=250)
+modelRf
+```
+
+##Validation
+```{r Data validation, include=TRUE}
+#Model performance is predicted on the validation data set.
+
+predictRf <- predict(modelRf, testData)
+confusionMatrix(testData$classe, predictRf)
+```
+
+##Model accuracy
+```{r Model Accuracy, include=TRUE}
+#Model accuracy is estimated
+accuracy <- postResample(predictRf, testData$classe)
+accuracy
+```
+
+##Out of Sample Error estimation
+```{r Out of sample error, include=TRUE}
+#Estimate the out of sample error
+oose <- 1 - as.numeric(confusionMatrix(testData$classe, predictRf)$overall[1])
+oose
+```
+The accuracy of the model is estimated to be 99.03% and the estimated out-of-sample error is 0.97%.
+
+##Predicting for Test Data Set
+```{r Predicting on test data, include=TRUE}
+#Apply the training data model to the testing data set downloaded from the data source. We remove the problem_id column first.
+
+result <- predict(modelRf, testCleaned[, -length(names(testCleaned))])
+result
+```
+
+##Appendix 
+
+###Figures
+```{r Figure1, include=TRUE}
+#Fig.1: Correlation Matrix Visualization
+corrPlot <- cor(trainData[, -length(names(trainData))])
+corrplot(corrPlot, method="color")
+```
+
+```{r Figure2, include=TRUE}
+#Fig.2: Decision Tree Visualization
+
+treeModel <- rpart(classe ~ ., data=trainData, method="class")
+prp(treeModel) 
+```
